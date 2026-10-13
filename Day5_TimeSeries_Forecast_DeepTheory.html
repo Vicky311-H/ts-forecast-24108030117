@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 5: 时间序列预测——三代范式与可复现的工程实践</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  options: { processHtmlClass: '' }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+<script>window.MathJax||document.write('<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>')</script>
+<style>
+:root {
+  --primary: #2563eb; --secondary: #7c3aed; --success: #059669; --warning: #d97706;
+  --danger: #dc2626; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-secondary: #64748b;
+  --border: #e2e8f0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7; padding: 0; }
+.container { max-width: 960px; margin: 0 auto; padding: 20px; }
+h1 { font-size: 2.1em; background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 30px 0 10px; }
+h2 { font-size: 1.5em; color: var(--primary); border-bottom: 3px solid var(--primary);
+  padding-bottom: 6px; margin: 50px 0 20px; }
+h3 { font-size: 1.18em; color: var(--secondary); margin: 30px 0 12px; }
+p { margin: 12px 0; }
+blockquote { border-left: 4px solid var(--primary); margin: 15px 0; padding: 10px 20px;
+  background: #eff6ff; border-radius: 0 8px 8px 0; }
+code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px;
+  overflow-x: auto; font-size: 0.85em; line-height: 1.5; margin: 12px 0; }
+table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background: #f1f5f9; font-weight: 600; }
+tr:nth-child(even) { background: #fafafa; }
+.tip-box { background: #fffbeb; border-left: 4px solid var(--warning); padding: 12px 16px;
+  margin: 15px 0; border-radius: 0 8px 8px 0; }
+.tip-box::before { content: '💡 教学要点: '; font-weight: bold; color: var(--warning); }
+.teacher-note { background: #ecfdf5; border-left: 4px solid var(--success); padding: 12px 16px;
+  margin: 15px 0; border-radius: 0 8px 8px 0; }
+.teacher-note::before { content: '📝 教师提示: '; font-weight: bold; color: var(--success); }
+.compare-box { background: #f0f9ff; border: 2px solid var(--primary); padding: 16px;
+  margin: 15px 0; border-radius: 8px; }
+.compare-box::before { content: '📊 对比分析: '; font-weight: bold; color: var(--primary); }
+pre.ascii-art { background: #0f172a; color: #38bdf8; font-family: 'Courier New', monospace;
+  padding: 16px; border-radius: 8px; font-size: 0.82em; line-height: 1.3; overflow-x: auto; }
+.danger-zone { background: #fef2f2; border-left: 4px solid var(--danger); padding: 12px 16px;
+  margin: 15px 0; border-radius: 0 8px 8px 0; }
+.danger-zone::before { content: '⚠️ 常见陷阱: '; font-weight: bold; color: var(--danger); }
+.qa-box { background: #f5f3ff; border-left: 4px solid var(--secondary); padding: 12px 16px;
+  margin: 15px 0; border-radius: 0 8px 8px 0; }
+.qa-box::before { content: '❓ 面试考点: '; font-weight: bold; color: var(--secondary); }
+.intuition-box { background: #f0fdf4; border-left: 4px solid var(--success); padding: 12px 16px;
+  margin: 15px 0; border-radius: 0 8px 8px 0; }
+.intuition-box::before { content: '🔍 直觉理解: '; font-weight: bold; color: var(--success); }
+.code-bridge { background: #1a1a2e; border: 1px solid var(--primary); color: #e2e8f0;
+  padding: 16px; margin: 15px 0; border-radius: 8px; font-family: 'Fira Code', 'Courier New', monospace; }
+.code-bridge .keyword { color: #c792ea; } .code-bridge .func { color: #82aaff; }
+.code-bridge .comment { color: #546e7a; } .code-bridge .number { color: #f78c6c; }
+.hw-box { background: #fff7ed; border: 3px solid var(--warning); padding: 20px;
+  margin: 20px 0; border-radius: 12px; }
+.hw-box::before { content: '📚 课后作业（防 AI 代写设计）'; font-weight: bold; color: var(--warning);
+  font-size: 1.2em; display: block; margin-bottom: 12px; }
+.mech-box { background: #f8fafc; border: 1px dashed var(--primary); padding: 12px 14px;
+  margin: 12px 0; border-radius: 8px; }
+.img-wrap { margin: 15px 0; text-align: center; }
+.img-wrap img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.img-cap { font-size: 0.85em; color: var(--text-secondary); margin-top: 6px; }
+.badge { display: inline-block; background: var(--danger); color: #fff; font-size: 0.72em;
+  padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+.badge.g { background: var(--success); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Day 5: 时间序列预测——三代范式与可复现的工程实践</h1>
+
+<p style="font-size:1.08em;color:var(--text-secondary);margin-bottom:30px">
+  <strong>数据</strong>: <code>flow.csv</code>（50 万条车辆检测记录）| 
+  <strong>代码</strong>: <code>timeseries_flow_code.py</code>（现代线性族，闭式岭回归，无需 GPU）|
+  <strong>作业工具</strong>: 学生 <code>hw_task_selfservice.py</code>（自助查任务书）| 教师 <code>hw_spec_generator.py</code>（批量发放/复算，<b>不发给学生</b>）|
+  <strong>版本</strong>: 2026-10 快照
+</p>
+
+<!-- ======== 学习指南 ======== -->
+<h2>📖 学习指南</h2>
+
+<h3>这门课要纠正的第一个直觉</h3>
+<p>很多人的时间序列印象停留在"ARIMA + LSTM"。这个印象在 <strong>2026 年已经过时了</strong>。
+本课不复习 LSTM 的用法，而是回答一个更有价值的问题：<strong>今天做时序预测，到底该用什么方法？为什么？</strong></p>
+
+<pre class="ascii-art">
+时序预测的三代范式（时间轴）
+
+  1970-2000 第一代:统计模型                2000-2020 第二代:深度学习        2021-2026 第三代
+  ┌──────────────┐                        ┌──────────────┐            ┌──────────────────┐
+  │  ARIMA       │                        │  RNN / LSTM  │            │ A. 线性模型复兴  │
+  │  指数平滑ETS │                        │  seq2seq     │            │   DLinear        │
+  │  Theta       │  ──── 被深度学习压制 ──▶│  DeepAR      │ ─────────▶ │   NLinear/RLinear│
+  │              │      (2018-2021)        │  TFT         │            │   FITS           │
+  │  地位:       │                        │              │            │ B. Patch+Transf. │
+  │  仍是基线 &  │                        │  地位:       │            │   PatchTST       │
+  │  可解释性    │                        │  被 Transformer│           │   iTransformer   │
+  └──────────────┘                        │  与线性反超   │            │   TimeMixer      │
+                                          └──────────────┘            │ C. 基础模型TSFM  │
+                                              ❌ RNN 已退场              │   Chronos-2      │
+                                                                         │   TimesFM 2.5/3  │
+                                                                         │   Moirai 2.0     │
+                                                                         └──────────────────┘
+</pre>
+
+<div class="compare-box">
+<b>一句话抓住三代范式的差异</b><br>
+第一代<b>假设结构已知</b>，用少量参数把结构写死（ARIMA 的 p/d/q）；<br>
+第三代<b>用数据把结构学出来</b>，而且发现"学出来的最简结构"往往还是线性的——<br>
+这正是 2023 年以来最重要的反直觉发现，<b>也是本课要重点讲透的部分</b>。
+</div>
+
+<h3>为什么"评估协议"比"模型选择"更容易出错？</h3>
+<table>
+<tr><th>维度</th><th>分类/回归 (Day 1-4)</th><th>时间序列预测 (Day 5)</th></tr>
+<tr><td>数据假设</td><td>样本独立同分布</td><td>样本按时间强依赖</td></tr>
+<tr><td>数据划分</td><td>随机打乱 + K 折</td><td><strong>滚动起源（时间顺序绝不打乱）</strong></td></tr>
+<tr><td>主指标</td><td>准确率 / F1</td><td><strong>MASE</strong>（+ MAE / RMSE）</td></tr>
+<tr><td>核心陷阱</td><td>过拟合</td><td><strong>数据泄露</strong>（本章第 5 章）</td></tr>
+</table>
+
+<blockquote><strong>核心纪律</strong>：预测 $t+h$ 时只许用 $t$ 及之前的信息。
+这一条比任何模型技巧都重要——它同时决定了你的指标是否可信、你的报告是否诚实。</blockquote>
+
+<!-- ======== 第1章 ======== -->
+<h2>1. 认识数据：从"事件流"到"时间序列"</h2>
+
+<p><code>flow.csv</code> 是<strong>车辆级</strong>交通检测数据：每辆车驶过检测器记一行，
+共 503,768 行，含 <code>Speed (mph)</code>、<code>Headway (s)</code>（车头时距，与前车到达时刻之差）、
+<code>Gap (s)</code>（车头空距，与前车尾部离开之差）。</p>
+
+<div class="intuition-box">
+<b>类比——把雨滴装进量筒</b>：雨是一滴一滴落的（事件级，间隔不均匀），气象站报的是"每小时降雨量"
+（规则网格）。检测器每毫秒都可能记到车，而所有时序模型都要求<strong>等间隔采样</strong>。
+所以第一步必须聚合：把每小时全部过车记录压成<strong>一个平均车速</strong>。
+</div>
+
+<pre class="code-bridge">
+<span class="comment"># 事件级 -&gt; 时间序列：清洗 + 聚合（本课代码第1步）</span>
+speed = df[<span class="string">"Speed (mph)"</span>].astype(float)
+df = df.loc[speed.between(<span class="number">10</span>, <span class="number">80</span>)]        <span class="comment"># ① 剔除传感器异常读数</span>
+df[<span class="string">"day"</span>], df[<span class="string">"hour"</span>] = df[<span class="string">"Date"</span>].dt.date, df[<span class="string">"Date"</span>].dt.hour
+hourly = df.groupby([<span class="string">"day"</span>, <span class="string">"hour"</span>])[<span class="string">"Speed (mph)"</span>].mean()   <span class="comment"># ② 逐时平均</span>
+<span class="comment"># 结果: 8 天 x 24 小时 = 192 个等间隔点，季节周期 s=24</span>
+</pre>
+
+<p>清洗剔除了 8,378 条（1.66%）速度落在 $[10,80]$ mph 之外的记录——真实检测器会输出 121 mph
+这类违背物理的读数，那是传感器故障，不是超级跑车。</p>
+
+<div class="img-wrap">
+<img src="output/ts_01_eda.png" alt="EDA">
+<div class="img-cap">图1 上：192 点完整序列；下：8 天同小时平均的"典型日曲线"，两峰两谷的日周期</div>
+</div>
+
+<p>典型日曲线讲了一个直观的故事：凌晨车少、车速接近自由流（约 38 mph）；7-8 点早高峰跌到
+27-28 mph；傍晚 16-18 点再次跌到 29 mph；夜里恢复。这就是<strong>季节性</strong>最生活化的样子。</p>
+
+<div class="tip-box">数据里的 8 天并不连续（分散在 2018-02-02 至 02-27 之间）。因为每天内部都是完整
+24 小时、"每日一循环"的结构真实存在，我们把 8 天按顺序拼成 192 点序列、以 24 为周期建模。
+这是教学上的合理简化；做研究时必须先检查采样连续性，并在报告里写明。</div>
+
+<!-- ======== 第2章 ======== -->
+<h2>2. 平稳性：给序列做"体检"，以及一个高频误解</h2>
+
+<h3>2.1 弱平稳的三个条件</h3>
+<p>$$\text{① } E[y_t] = \mu \quad \text{② } \mathrm{Var}(y_t) = \sigma^2 \quad \text{③ } \mathrm{Cov}(y_t, y_{t-k}) \text{ 只依赖 } k \text{，不依赖 } t$$</p>
+
+<div class="intuition-box">
+<b>为什么模型要求平稳？</b>模型的工作是"从历史归纳规律，再外推到未来"，前提是
+<strong>历史规律 = 未来规律</strong>。若均值不断漂移（通胀让物价整体上移），
+你学到的"平均水位"对未来就是错的。平稳性 = 保证"过去的统计规律可安全外推"。
+</div>
+
+<h3>2.2 ADF 检验与本例的真实结果</h3>
+<p>ADF 检验的原假设是"存在单位根"（随机游走式不平稳），$p&lt;0.05$ 时拒绝。实测：</p>
+
+<table>
+<tr><th>序列</th><th>ADF 统计量</th><th>p 值</th><th>结论</th></tr>
+<tr><td>原始序列</td><td>-7.452</td><td>$5.62\times10^{-11}$</td><td>平稳 ✅</td></tr>
+<tr><td>一阶差分后</td><td>-6.754</td><td>$2.90\times10^{-9}$</td><td>平稳 ✅</td></tr>
+</table>
+
+<div class="danger-zone"><b>最高频的概念错误</b>：ADF 说"平稳"，不代表序列没有可建模的结构！
+ADF <b>只检验单位根（随机趋势）型不平稳</b>，<b>不检验季节型不平稳</b>。
+我们的序列围绕约 33 mph 的固定水位回归，没有随机漂移，所以 ADF 判平稳；
+但它内部藏着强烈的 24 小时周期摆动。所以模型照样要做季节处理（差分或分量的季节头）。
+<b>"平稳"和"有季节性"是两个正交的概念。</b></div>
+
+<div class="img-wrap">
+<img src="output/ts_02_stationarity.png" alt="平稳性">
+<div class="img-cap">图2 上/中：原始与差分序列及 ADF 结果；下：24 小时滚动均值随昼夜大幅摆动——ADF 测不到的"均值层周期结构"</div>
+</div>
+
+<!-- ======== 第3章 ======== -->
+<h2>3. ACF 与 PACF：给序列测"记忆力"</h2>
+
+<div class="intuition-box">
+<b>类比——山谷里的回声</b>：<b>ACF</b> 是你对山谷喊一声听<b>总回声</b>，
+$y_t$ 与 $y_{t-k}$ 的总体相关里混着"中间各步传导"的间接影响；<br>
+<b>PACF</b> 则把中间所有"传话人"都剔除后，看 $y_{t-k}$ 对 $y_t$ 的<b>直接影响</b>。
+</div>
+
+$$\rho(k) = \frac{\mathrm{Cov}(y_t,\, y_{t-k})}{\sqrt{\mathrm{Var}(y_t)\,\mathrm{Var}(y_{t-k})}} \quad \text{(ACF)}$$
+
+<table>
+<tr><th>模型</th><th>ACF</th><th>PACF</th><th>记忆机制</th></tr>
+<tr><td><b>AR(p)</b></td><td>拖尾（衰减/振荡）</td><td><b>lag p 处截尾</b></td><td>当前值 = 历史<b>值</b>的线性组合</td></tr>
+<tr><td><b>MA(q)</b></td><td><b>lag q 处截尾</b></td><td>拖尾</td><td>当前值 = 历史<b>噪声</b>的线性组合</td></tr>
+<tr><td><b>ARMA(p,q)</b></td><td>拖尾</td><td>拖尾</td><td>混合</td></tr>
+</table>
+
+<p>图3 的 ACF 给出教科书级证据：<strong>lag 24 处显著第二高峰</strong>，整条 ACF 呈 24 步周期的波浪。
+这就是"日周期"在相关性层面的指纹，也是我们把周期定为 $s=24$、把 <code>look_back</code> 设为 24 的依据。</p>
+
+<div class="img-wrap">
+<img src="output/ts_03_acf_pacf.png" alt="ACF/PACF">
+<div class="img-cap">图3 原始序列的 ACF（lag24 峰 = 日周期指纹）与 PACF；差分后的 ACF/PACF</div>
+</div>
+
+<!-- ======== 第4章 ======== -->
+<h2>4. 分解：把序列拆成三层</h2>
+
+<p>$$y_t = \underbrace{T_t}_{\text{趋势}} + \underbrace{S_t}_{\text{季节}} + \underbrace{R_t}_{\text{残差}} \quad(\text{加法}) \qquad\qquad y_t = T_t \times S_t \times R_t \quad(\text{乘法})$$</p>
+
+<table>
+<tr><th>成分</th><th>含义</th><th>本例中的样子</th></tr>
+<tr><td>趋势 $T_t$</td><td>长期缓慢方向性变化</td><td>基本平坦（8 天内无系统升降）</td></tr>
+<tr><td>季节 $S_t$</td><td>固定周期重复波动</td><td>周期 24h 的规则波形，本例的主角</td></tr>
+<tr><td>残差 $R_t$</td><td>去掉前两者的随机部分</td><td>高峰时段明显更大</td></tr>
+</table>
+
+<div class="tip-box"><b>加法还是乘法？</b>振幅恒定 → 加法；水位越高摆得越大 → 乘法。
+本例高峰时段（车速低、车流密）残差更大，方差随水平增长，严格说更接近乘法结构（或取对数后用加法）。
+多数正值且幅度随水平变化的序列（销量、客流、流量）都属此类。</div>
+
+<div class="img-wrap">
+<img src="output/ts_04_decomposition.png" alt="分解">
+<div class="img-cap">图4 观测 / 趋势 / 季节（周期 24）/ 残差。季节项是绝对主角</div>
+</div>
+
+<div class="compare-box">
+<b>分解不只用来"看"，还能用来"建模"</b>：DLinear 的核心思想就是把序列拆成趋势与季节两条线，
+<b>各自用一个线性头拟合，再相加</b>。本课代码里的 <code>DLinear</code> 就是这个结构
+（区别是它用因果移动平均做分解，更适合在线预测）。这是"结构先验"胜过"盲目加深度"的典范。
+</div>
+
+<!-- ======== 第5章 ======== -->
+<h2>5. 评估协议：时间不能被打乱</h2>
+
+<h3>5.1 随机划分 = 作弊</h3>
+<div class="danger-zone">在时间序列上用 <code>train_test_split(shuffle=True)</code> 或普通 K 折，
+等于"用明天训练、去回忆昨天"——这不是预测，是回忆。指标会漂亮得离谱，上线即崩。
+这叫<b>数据泄露（data leakage）</b>，是时序项目失败的第一大原因。</div>
+
+<table>
+<tr><th>泄露形式</th><th>错误做法</th><th>正确做法</th></tr>
+<tr><td>① 划分泄露</td><td>随机打乱后划分</td><td>按时间切分，测试在训练之后</td></tr>
+<tr><td>② 归一化泄露</td><td>用<strong>全序列</strong>均值/方差做标准化</td><td>只用<strong>训练段</strong>统计量，冻结后套到测试段</td></tr>
+<tr><td>③ 特征泄露</td><td>滚动统计窗口含当前或未来时刻</td><td>窗口右端点严格 < 预测目标时刻</td></tr>
+<tr><td>④ 移动平均泄露</td><td>用<strong>居中</strong>窗口做平滑</td><td>用<strong>因果</strong>（只看过去）窗口</td></tr>
+</table>
+
+<div class="danger-zone">第 ④ 条是本课代码里特意处理的：<code>trailing_ma()</code> 只用到当前位置为止的数据。
+写成 <code>np.convolve(x, np.ones(k)/k, mode='same')</code> 看起来更"标准"，但它会看到未来 2 个点——
+在本课这种短序列上，这几个点几乎就是答案本身。</div>
+
+<h3>5.2 滚动起源交叉验证（现代标准）</h3>
+<p>本章用 <strong>expanding window</strong>：训练窗口只增不减，每折测试块紧随其后；
+最后一折留作<strong>末端保留</strong>，完全模拟真实上线预测。</p>
+
+<pre class="ascii-art">
+折1: [训练 72 ][测试 24]
+折2: [训练     96    ][测试 24]
+折3: [训练         120        ][测试 24]
+末端:  [训练            144            ][测试 24]   ← 完全模拟"上线后预测明天"
+       ^ 训练只增不减       ^ 测试永远在训练之后
+</pre>
+
+<div class="img-wrap">
+<img src="output/ts_05_rolling_cv.png" alt="滚动起源CV">
+<div class="img-cap">图5 滚动起源交叉验证：绿=训练，红=测试。测试块永远在时间轴右端</div>
+</div>
+
+<h3>5.3 指标：为什么主推 MASE</h3>
+<p>$$\mathrm{MASE} = \frac{\displaystyle\frac{1}{n}\sum_{t} |y_t - \hat{y}_t|}{\displaystyle\frac{1}{m}\sum_{j}|y_j - y_{j-1}|}$$
+分母是<strong>训练段</strong>朴素预测的平均绝对误差。</p>
+
+<table>
+<tr><th>指标</th><th>量纲</th><th>优点</th><th>缺点</th></tr>
+<tr><td><b>MASE</b></td><td>无量纲</td><td><b>跨数据集可比</b>（这是 GIFT-Eval 榜单的通用尺），尺度不变</td><td>不反映大误差惩罚</td></tr>
+<tr><td>MAE</td><td>与 y 相同</td><td>直观、单位可解释</td><td>不可跨数据集比</td></tr>
+<tr><td>RMSE</td><td>与 y 相同</td><td>平方惩罚大误差</td><td>对异常值敏感</td></tr>
+<tr><td>MAPE</td><td>百分比</td><td>无量纲</td><td><b>真值近 0 时爆炸</b>；跨序列平均会失真</td></tr>
+</table>
+
+<div class="tip-box">本课代码用 <code>naive_scale()</code> 在训练段上算 MASE 分母。
+如果用全序列算分母，测试集信息就漏进了训练——这正是第 5.1 节第 ② 条泄露的隐蔽版本。
+MAPE 之所以逐步被 MASE 取代，正是因为它对"接近零的目标"（流量、销量、缺货）会给出荒谬数值。</div>
+
+<!-- ======== 第6章 ======== -->
+<h2>6. 模型演进：三代范式（本课核心）</h2>
+
+<h3>6.1 第一代：统计模型——从主角退居"基线与可解释性"</h3>
+<p>ARIMA / 指数平滑 / Theta 在今天仍有不可替代的价值，但角色变了：</p>
+
+<table>
+<tr><th>还用不用</th><th>用在哪里</th></tr>
+<tr><td>✅ 必须用</td><td><b>Seasonal Naive 作为必备基线</b>；GIFT-Eval 榜单中它就是相对 MASE = 1.00 的参照系。任何新模型先过它这一关。</td></tr>
+<tr><td>✅ 仍常用</td><td>样本极少、需要<b>预测区间</b>与统计推断的场景；金融/计量类要求可解释的任务；作为集成的一个分量。</td></tr>
+<tr><td>⚠️ 地位下降</td><td>作为"最强模型"的候选——在周期性强、样本中等的数据上，常被一个带归一化的线性模型超过。</td></tr>
+</table>
+
+<p>本课代码保留 <code>Seasonal Naive</code> 与 <code>Naive</code> 作为基线，但<b>不再把 Holt-Winters / SARIMA
+放进对决名单</b>：它们在 192 点的数据上既无优势、又把叙事重心拉回第一代。</p>
+
+<h3>6.2 第二代：RNN/LSTM 为什么退场</h3>
+<p>你的直觉是对的，RNN 在时序预测中已基本退场。原因不是它"不够好"，而是三条硬伤叠加：</p>
+
+<table>
+<tr><th>硬伤</th><th>机理</th><th>后果</th></tr>
+<tr><td><b>递归误差累积</b></td><td>多步预测必须把自己的预测喂回输入</td><td>步数一多就漂移，Moirai/Chronos-2 正是用"非自回归一次出完整 horizon"来规避</td></tr>
+<tr><td><b>训练不可并行</b></td><td>$h_t$ 依赖 $h_{t-1}$，时间步之间串行</td><td>GPU 吃不满；Patch/Transformer 可完全并行</td></tr>
+<tr><td><b>长依赖被结构性削弱</b></td><td>信息要逐步传过 $t$ 步</td><td>Day 3 已算过：有效记忆 ~10-20 步，RNN 原生的衰减乘积无法根治</td></tr>
+</table>
+
+<div class="compare-box">
+<b>更关键的实证</b>：连"深度学习时代"内部，RNN 也常输给 <i>线性</i> 模型。
+Autoformer（2021）自己的消融实验就发现 DLinear 打赢了 Informer / Transformer；
+GIFT-Eval 榜单（arXiv:2410.10393）总榜第一是 <b>PatchTST</b>，不是任何 RNN。
+<br><b>结论</b>：RNN 的历史价值在<b>理解序列建模与记忆机制</b>（Day 3 的教学目的），
+而非 2026 年的工程首选。它留在 Day 3，留在本章的"为什么"里，不留在对决名单里。
+</div>
+
+<h3>6.3 第三代 A：线性模型的复兴（最反直觉、也最重要）</h3>
+<p>2022 年 RevIN（可逆实例归一化）解决了分布漂移问题，2023 年 DLinear 掀起"线性反超 Transformer"的辩论。
+核心结构其实极简：</p>
+
+$$\text{NLinear: } \hat{y} = \underbrace{(w \cdot (x - x_{last})) + b}_{\text{在"相对末值"空间预测}} + x_{last}$$
+$$\text{DLinear: } \hat{y} = \underbrace{w_1 \cdot \mathrm{MA}(x)}_{\text{趋势头}} + \underbrace{w_2 \cdot (x - \mathrm{MA}(x))}_{\text{季节头}}$$
+
+<p><b>两个关键设计值得单独讲</b>：</p>
+<div class="intuition-box">
+<b>① 实例归一化（NLinear 的关键）</b>：不同序列、或同一序列的不同"水位"下，
+分布位置差别很大。减去窗口末值再建模，等于强迫模型只学<b>形状</b>而不学<b>水位</b>，
+迁移性大幅改善。<br>
+<b>② 趋势-季节解耦（DLinear 的关键）</b>：趋势与季节混在一起用一个头拟合，会互相干扰。
+拆成两个头各自拟合，参数各自专注，反而更准。
+</div>
+
+<div class="compare-box">
+<b>2025 年的独立实证</b>（UrbanAI 2025 挑战赛，arXiv:2512.10866，长程室内温度预测）<br>
+在标准化训练/验证/测试划分下的<b>测试 MAE</b>：<br>
+&nbsp;&nbsp;NLinear <b>0.2461</b> &lt; DLinear 0.2811 &lt; Linear 0.2862 ≪ Autoformer 0.3598 &lt;
+Transformer 0.8342 ≈ Informer 0.8342<br>
+<b>值得注意</b>：Transformer 的<b>训练</b> MSE 极低（0.0330），测试却崩到 1.4371——
+典型的<b>在小样本上把训练集背下来、毫无泛化</b>。结论不是"线性永远赢"，
+而是"<b>归纳偏置选对了，容量小反而赢</b>"。
+</div>
+
+<div class="tip-box">本课代码用<b>闭式岭回归</b>实现这一族：$W = (X^\top X + \alpha I)^{-1} X^\top Y$。
+好处是无需 GPU、秒级出结果、<b>结果确定可复现</b>（不依赖随机初始化），
+非常适合在课堂上反复追问"这个结论稳不稳"。$\alpha$ 由<b>训练段尾部</b>的内层验证自动选择，
+不用测试集调参。</div>
+
+<h3>6.4 第三代 B：Patch + Transformer（当前的主力架构）</h3>
+<p>把长序列切成 patch 再做注意力，是 2023 年以来最成功的架构改进。</p>
+
+<pre class="ascii-art">
+原始逐点输入:  [x1][x2][x3][x4][x5][x6][x7][x8] ... 注意力代价 O(L^2)，且单个点信息量太少
+                     ↓ patch 化 (patch_len=P, stride=S)
+patch 输入:     [x1..x4][x5..x8][x9..x12] ...  序列长度 L/P，语义更集中
+                     ↓ 线性嵌入 -> Transformer -> 线性头
+预测:           未来 H 步
+</pre>
+
+<table>
+<tr><th>代表模型</th><th>年份/会议</th><th>核心贡献</th></tr>
+<tr><td><b>PatchTST</b></td><td>ICLR 2023</td><td>通道无关的 patch 分割 + 线性头；<b>GIFT-Eval 总榜第一</b>（相对 MASE 0.86）</td></tr>
+<tr><td><b>iTransformer</b></td><td>ICLR 2024</td><td>反转注意力维度：把"变量"当 token，捕捉跨变量依赖</td></tr>
+<tr><td><b>TimeMixer</b></td><td>ICLR 2024</td><td>多尺度时间混合，可分解式建模</td></tr>
+<tr><td><b>ModernTCN</b></td><td>NeurIPS 2024</td><td>大核卷积 + 可变大感受野，卷积复兴路线</td></tr>
+<tr><td><b>TimeXer</b></td><td>2024</td><td>显式建模外生变量（exogenous）的 token 化</td></tr>
+<tr><td><b>TimesNet</b></td><td>ICLR 2024</td><td>用 FFT 捕捉多周期（周/月/年）叠加</td></tr>
+</table>
+
+<div class="qa-box"><b>一个值得玩味的数学事实</b>：如果把窗口切成 patch 后<b>仅仅拉平</b>再接一个
+<b>全秩线性头</b>，得到的映射在数学上与"直接对窗口做线性回归"<b>完全等价</b>
+（本课代码最初就踩了这个坑，两行结果一模一样）。<br>
+这说明：<b>PatchTST 的增益不来自 patch 本身，而来自 patch 嵌入与注意力的非线性/参数共享结构。</b>
+"分片"是必要不充分的技巧——理解这一点，就理解了为什么"照抄结构"不等于"迁移有效"。
+</div>
+
+<h3>6.5 第三代 C：时间序列基础模型（TSFM，2024-2026 的主角）</h3>
+<p>在<b>超大规模</b>真实时间点（百亿到万亿级）上预训练，一个模型直接零样本（zero-shot）预测
+任意未见过的序列，不必逐序列训练。</p>
+
+<table>
+<tr><th>模型</th><th>机构</th><th>架构/规模</th><th>上下文</th><th>权重许可</th><th>要点</th></tr>
+<tr><td><b>Chronos-2</b></td><td>Amazon</td><td>编码器 120M</td><td>8192</td><td><span class="badge g">Apache 2.0</span></td><td>自建部署首选；P1–P99 共 21 个分位数</td></tr>
+<tr><td><b>TimesFM 2.5</b></td><td>Google</td><td>解码器 200M</td><td>16384</td><td><span class="badge g">Apache 2.0</span></td><td>单模型零样本；递归生成误差累积</td></tr>
+<tr><td><b>TimesFM 3.0</b></td><td>Google</td><td>解码器 330M</td><td>2048(BigQuery)</td><td><span class="badge">非商用</span></td><td>2026-08-31 发布，官方榜单最强，但权重仅限 BigQuery 内生产使用</td></tr>
+<tr><td><b>Moirai 2.0</b></td><td>Salesforce</td><td>MoE + any-variate 注意力</td><td>—</td><td><span class="badge">CC BY-NC</span></td><td>多变量/协变量最强；<b>不可商用</b></td></tr>
+<tr><td>Lag-Llama</td><td>ServiceNow</td><td>滞后分词自回归</td><td>1024</td><td>—</td><td>概率预测、采样灵活</td></tr>
+<tr><td>Granite TTM</td><td>IBM</td><td>Tiny Time Mixer &lt;1M</td><td>1536</td><td><span class="badge g">Apache 2.0</span></td><td>极小，CPU/边缘可跑</td></tr>
+<tr><td>MOMENT</td><td>CMU</td><td>掩码预训练 Transformer</td><td>512</td><td>—</td><td>多任务：预测/分类/异常检测/插补</td></tr>
+<tr><td>TimeGPT</td><td>Nixtla</td><td>商业托管</td><td>—</td><td>商业订阅</td><td>免运维；需评估数据驻留与治理</td></tr>
+</table>
+
+<div class="danger-zone"><b>许可陷阱（工程上最容易踩）</b>：榜单第一的 TimesFM 3.0 权重
+<b>不允许自托管商用</b>，Moirai 2.0 是 <b>CC BY-NC（非商用）</b>。
+真正能自建商用部署的是 <b>Chronos-2（Apache 2.0）</b>与 TimesFM 2.5。
+"榜单最强"和"你能合法用"是两件事——选型时先看许可，再看分数。
+（以上为 2026-10 快照，版本号变动极快，落地前请复核官方模型卡。）</div>
+
+<h3>6.6 一句话带过：概率预测与扩散模型</h3>
+<p>点预测给你一个数，<b>概率预测给你一个分布</b>——这在库存、容量规划、风险决策里才是真正需要的输出。
+技术路线有两条：<b>分位数/集成</b>（Chronos-2 的 21 个分位数、集成模型）与
+<b>扩散模型</b>（Diffusion 类方法把预测当作生成任务，如 TimeGrad / CSDI 一脉）。
+评估指标从 MAE 换成 <b>CRPS</b> 或分位数损失。GIFT-Eval 榜单也同时报告 CRPS。</p>
+
+<h3>6.7 选型决策树（可直接照着做）</h3>
+<pre class="ascii-art">
+你的时序预测任务
+     |
+     +-- 样本极少 / 冷启动 / 上千条序列无人力逐条调参 --&gt; 零样本 TSFM (Chronos-2, TimesFM 2.5)
+     |                                                       先用 Seasonal Naive 兜底对比
+     +-- 高频(秒/分钟级)、单序列或少量序列 -------------&gt; PatchTST / iTransformer
+     |      多变量且变量多 -----------------------------&gt; iTransformer / Moirai(注意许可)
+     +-- 中小规模 + 强周期 + CPU 即可 -----------------&gt; NLinear / DLinear  ← 本课重点
+     |      非线性确实有增益(如含明确阈值/突变) -------&gt; 加浅层 MLP 或小 Transformer
+     +-- 需要预测区间 / 统计推断 / 极少样本 -----------&gt; 统计模型 (ETS/ARIMA/Theta) 或其集成
+     +-- 高噪声、信号弱 -------------------------------&gt; 统计集成，别指望深度模型
+</pre>
+
+<div class="tip-box"><b>选型的第一性问题不是"哪个最强"，而是"我的数据和它匹配吗"。</b>
+GIFT-Eval 的关键发现是：<b>在有充足同域数据的任务上，专用监督模型仍优于基础模型</b>；
+TSFM 真正的主场是<strong>数据稀缺与快速原型</strong>。而且它的优势<b>随数据特征而反转</b>：
+低频、强季节、长上下文档位是 TSFM 甜区；高频、尖峰序列上 PatchTST 这类深度模型常常反超。</div>
+
+<!-- ======== 第7章 ======== -->
+<h2>7. 本课实验：现代线性族 vs 必备基线</h2>
+
+<p>192 点数据、24 步输入窗口、24 步预测步长、周期 24。全部模型用<b>闭式岭回归</b>实现，
+无随机初始化、无 GPU，<b>结果完全确定可复现</b>。</p>
+
+<h3>7.1 滚动起源交叉验证（3 折）</h3>
+<table>
+<tr><th>模型</th><th>CV MAE（均值±标准差）</th><th>CV MASE</th><th>解读</th></tr>
+<tr><td><b>DLinear</b>（趋势-季节双头）</td><td><b>0.969 ± 0.371</b></td><td><b>0.650</b></td><td>结构最贴合，冠军</td></tr>
+<tr><td>Ridge-AR（线性基线）</td><td>1.012 ± 0.179</td><td>0.677</td><td>朴素线性已很强</td></tr>
+<tr><td>Seasonal Naive</td><td>1.154 ± 0.143</td><td>0.771</td><td>零参数基线</td></tr>
+<tr><td>NLinear（实例归一化）</td><td>1.173 ± 0.173</td><td>0.785</td><td>本数据上归一化收益不明显</td></tr>
+<tr><td>SeasonalDiff（季节差分线性）</td><td>1.338 ± 0.736</td><td>0.884</td><td>折间波动最大，不稳定</td></tr>
+<tr><td>Naive（随机游走）</td><td>3.300 ± 0.410</td><td>2.210</td><td>必须被击败</td></tr>
+</table>
+
+<h3>7.2 末端保留折（完全模拟上线预测未来 24 小时）</h3>
+<table>
+<tr><th>模型</th><th>MAE (mph)</th><th>RMSE (mph)</th><th>MASE</th></tr>
+<tr><td><b>DLinear</b></td><td><b>0.555</b></td><td><b>0.718</b></td><td><b>0.371</b></td></tr>
+<tr><td>SeasonalDiff</td><td>0.794</td><td>0.912</td><td>0.530</td></tr>
+<tr><td>Ridge-AR</td><td>0.813</td><td>1.177</td><td>0.543</td></tr>
+<tr><td>NLinear</td><td>0.936</td><td>1.362</td><td>0.625</td></tr>
+<tr><td>Seasonal Naive</td><td>1.181</td><td>1.874</td><td>0.789</td></tr>
+<tr><td>Naive</td><td>2.922</td><td>3.747</td><td>1.951</td></tr>
+</table>
+
+<div class="img-wrap">
+<img src="output/ts_06_forecast.png" alt="预测对比">
+<div class="img-cap">图6 末端保留折：各模型预测 vs 真实值。注意 6-9 点（早高峰）所有模型"集体保守"</div>
+</div>
+
+<div class="img-wrap">
+<img src="output/ts_07_metrics.png" alt="指标对比">
+<div class="img-cap">图7 左：MAE/RMSE；右：MASE 与 MASE=1 朴素水平参考线</div>
+</div>
+
+<h3>7.3 三个诚实的结论</h3>
+<div class="compare-box">
+<b>① 线性模型的收益来自"结构对"，不是"容量大"</b><br>
+DLinear（0.371）比 Ridge-AR（0.543）好近 1/3，但两者都是线性映射。差别在于
+<b>DLinear 把趋势与季节拆开、各用一个头</b>——结构先验而非参数规模带来了增益。<br><br>
+<b>② NLinear 的实例归一化在本例上没帮上忙（0.625，劣于 Ridge-AR）</b><br>
+这与 UrbanAI 2025 的结论并不矛盾：NLinear 的优势出现在<b>分布位置差异大</b>的设定。
+本数据 192 点、单一水位、噪声很小，归一化的收益被"损失末值信息"抵消。
+<b>照搬论文里的组件、却不知道它为什么有用，是最常见的误用方式。</b><br><br>
+<b>③ 折间标准差暴露了"赢家"的不确定性</b><br>
+DLinear 的 CV MAE 标准差高达 0.371（最大）。单看折均值它是冠军，
+但"±0.371"意味着换一周数据结论可能翻转。<b>报告只给均值不给标准差，是选择性汇报。</b>
+</div>
+
+<div class="img-wrap">
+<img src="output/ts_09_weights.png" alt="权重贡献">
+<div class="img-cap">图9 可解释性：各输入位置对未来 24 步的平均 |权重| 贡献。线性模型的权重可以直接读</div>
+</div>
+
+<div class="teacher-note">
+图9 是本课最有教学价值的一张图：<b>线性模型的权重是可以直接读懂的</b>。
+哪个时间位置对预测重要，一目了然。这种可解释性不是"简单模型的缺点"，
+而是很多场景下<strong>真正的需求</strong>（要向监管、向业务方解释"为什么这么预测"）。
+</div>
+
+<!-- ======== 第8章 ======== -->
+<h2>8. 残差诊断：模型还有没有漏掉东西？</h2>
+
+<p>模型拟合完，残差应当"什么都不剩"（白噪声）。<strong>Ljung-Box 检验</strong>的原假设是
+"残差为白噪声"：$p &gt; 0.05$ 说明模型已榨干数据；$p &lt; 0.05$ 说明还有结构没被建模。</p>
+
+<table>
+<tr><th>模型</th><th>LB(12) 统计量</th><th>p 值</th><th>结论</th></tr>
+<tr><td>DLinear</td><td>81.34</td><td>$2.3\times10^{-12}$</td><td>仍有显著结构</td></tr>
+<tr><td>SeasonalDiff</td><td>103.03</td><td>$1.4\times10^{-16}$</td><td>仍有显著结构</td></tr>
+<tr><td>Ridge-AR</td><td>73.61</td><td>$6.7\times10^{-11}$</td><td>仍有显著结构</td></tr>
+<tr><td>NLinear</td><td>92.99</td><td>$1.3\times10^{-14}$</td><td>仍有显著结构</td></tr>
+<tr><td>Seasonal Naive</td><td>87.53</td><td>$1.5\times10^{-13}$</td><td>仍有显著结构</td></tr>
+<tr><td>Naive</td><td>134.33</td><td>$8.3\times10^{-23}$</td><td>仍有显著结构</td></tr>
+</table>
+
+<div class="danger-zone"><b>本表有一个必须诚实交代的缺陷</b>：这些残差是把 4 折（3 CV 折 + 末端保留折）
+<b>汇集</b>起来（共 96 个残差）后做的检验。汇集会在每折边界制造人为的自相关，
+使检验<b>偏于显著</b>。所以上表"全部显著拒绝白噪声"这一结论<b>不可直接采信</b>。
+正确做法是<b>逐折做检验</b>（每折 24 个残差，lag 需远小于 n）。
+<br>这一条本身比结论更重要：<b>知道自己的检验在什么假设下成立</b>，是统计素养的底线。</div>
+
+<div class="img-wrap">
+<img src="output/ts_08_residual_acf.png" alt="残差ACF">
+<div class="img-cap">图8 末端保留折残差的自相关（lag ≤ 10）。落在置信带内才算白噪声</div>
+</div>
+
+<div class="tip-box"><b>从残差还能看到什么？</b>看图8 中早高峰附近的残差柱：若残差在高流量时段
+<b>同向偏大</b>，说明模型系统性地低估了拥堵程度——这是<b>可建模的偏差</b>，
+下一步该加"时段指示变量"或"流量协变量"，而不是急着换更大的网络。
+残差诊断的价值就是<b>把"模型不够好"翻译成"下一步该加什么结构"</b>。</div>
+
+<!-- ======== 第9章 ======== -->
+<h2>9. 深化：多步策略、预测区间、统计比较</h2>
+
+<h3>9.1 多步预测的两种策略</h3>
+<table>
+<tr><th>策略</th><th>做法</th><th>优点</th><th>缺点</th></tr>
+<tr><td><b>递归式</b></td><td>预测 1 步 → 喂回 → 再预测下一步</td><td>只需一个模型</td><td><b>误差累积</b>，早期小错滚雪球</td></tr>
+<tr><td><b>直接式</b></td><td>每个 horizon 单独建模</td><td>无累积</td><td>模型数量 ×h</td></tr>
+</table>
+<p>本课代码用<b>直接多输出</b>（窗口 $\to$ 24 步一次性回归），这也是现代 TSFM
+（如 Moirai、Chronos-2）一次输出整个 horizon 的理由。</p>
+
+<h3>9.2 点预测 ≠ 预测</h3>
+<p>完整的预测要回答"有 95% 把握落在哪个区间"。统计模型天然给区间（<code>get_forecast().conf_int()</code>），
+TSFM 用分位数（如 Chronos-2 的 21 个 P1–P99）实现同一件事，
+深度模型则需要分位数回归 / MC Dropout / 深度集成等额外技巧。</p>
+
+<div class="tip-box">区分<b>置信区间</b>（对参数不确定性的度量）与<b>预测区间</b>
+（对未来单个观测的度量，更宽）。另外，评估区间质量的指标不是 MAE，而是
+<b>CRPS</b> / 分位数损失 / 覆盖率——区间要"宽而不虚"。</div>
+
+<h3>9.3 模型之间的差异是否显著？Diebold-Mariano 检验</h3>
+<p>如果模型 A 的 MAE 是 0.555、模型 B 是 0.813，你能断言 A 更好吗？<b>不能</b>——
+需要检验两者的误差差异 $d_t = e_t^A - e_t^B$ 的均值为零是否被拒绝。
+DM 检验正是为此设计的，并且需要<b>小样本修正</b>（Hansen 修正）才可靠。</p>
+<p>本课作业把 DM 检验作为必做项，正是为了训练学生<b>不要用"指标好看"代替"差异显著"</b>。</p>
+
+<div class="qa-box"><b>面试三连（2026 版）</b><br><br>
+<b>Q1: "2026 年做时序预测你会用什么模型？"</b><br>
+A: 先问数据：样本量、频率、是否有强季节、是否多变量、能否用外部协变量。
+样本少或多序列 → 零样本 TSFM（Chronos-2，注意许可）；中高频单序列 → PatchTST/iTransformer；
+周期性强且中小规模 → NLinear/DLinear 往往性价比最高。<b>永远先跑 Seasonal Naive 基线。</b><br><br>
+<b>Q2: "为什么线性模型能打败 Transformer？"</b><br>
+A: 因为时序数据信噪比低、样本量远小于 CV/NLP，复杂模型会把训练集背下来（UrbanAI 2025 中
+Transformer 训练 MSE 0.033、测试 1.437 就是典型过拟合崩塌）。线性模型的强归纳偏置
+（平滑、局部性、归一化/分解）恰好匹配时序结构，偏差-方差权衡占优。<br><br>
+<b>Q3: "RNN/LSTM 在时序预测里过时了吗？"</b><br>
+A: 工程上基本过时（递归误差累积、无法并行、长期被 Transformer 与线性模型双重压制）；
+TSFM 全部基于 Transformer 而非循环结构。但它是理解序列建模与记忆机制的必经之路，
+且在<b>流式小样本、超低延迟、资源受限</b>的边缘场景仍有其位置。
+</div>
+
+<!-- ======== 第10章 ======== -->
+<h2>10. 课后作业（防 AI 代写与抄袭设计）</h2>
+
+<div class="hw-box">
+
+<h3>作业：按你的学号领取一份"专属任务书" <span style="color:#d97706">★★★★★</span></h3>
+
+<h3>10.1 设计思路：为什么普通作业挡不住 AI</h3>
+<div class="danger-zone" style="margin-top:6px">
+普通时序作业（"用 LSTM 预测 flow.csv 的车速"）在 2026 年几乎失效：
+AI 三十秒就能生成一份<b>结构完整、指标漂亮、但没有任何思考痕迹</b>的代码与报告，
+而批改者很难逐行分辨。本作业因此<b>不使用统一题目</b>，改为
+<b>由学号确定性派生一份个性化任务书</b>，并配四道"指纹型"机制。
+</div>
+
+<table>
+<tr><th>机制</th><th>具体做法</th><th>能防住什么</th></tr>
+<tr><td><b>① 学号派生任务书</b></td><td>学生运行 <code>hw_task_selfservice.py --sid &lt;学号&gt;</code>，
+派发<b>目标变量</b>（speed / headway / gap）、<b>方向</b>、<b>车道范围</b>、<b>粒度</b>、
+<b>天数</b>、<b>异常值区间</b>、<b>窗口长度</b>、<b>预测步长</b>、<b>CV 折数</b>、随机种子、附加任务</td>
+<td>AI 无法知道你的参数组合 → 生成的"通用答案"必然答非所问</td></tr>
+<tr><td><b>② 数据指纹</b></td><td>对你聚合后的序列做 SHA256 取前 12 位，报告与代码注释必须出现</td>
+<td>抄别人的报告，指纹对不上（40 人实测 40 个指纹全不同）</td></tr>
+<tr><td><b>③ 唯一锚点值</b></td><td>任务书给出<b>你</b>口径下"折 1 的 Seasonal Naive MASE"，
+教师用 <code>--verify</code> 一键复算</td><td>AI 猜不到、同学抄不到；对不上即数字系编造</td></tr>
+<tr><td><b>④ 可复现性审计</b></td><td>教师随机指定某一折、换随机种子重跑你的代码</td>
+<td>AI 生成的代码常跑不通、或换种子后数字对不上 —— <b>这是最致命的一击</b></td></tr>
+</table>
+
+<h3>10.2 分发策略：两个文件，各管一段</h3>
+<p>任务书由代码确定性生成，但这<b>不等于</b>把整个脚本丢给学生。关键在于
+<b>教师复算与学生自助必须得到完全一致的口径</b>——否则学生会按错误参数做半天。
+为此拆成两个文件：</p>
+
+<table>
+<tr><th>文件</th><th>发给谁</th><th>能力</th><th>为什么这样切</th></tr>
+<tr><td><code>hw_task_selfservice.py</code></td><td><b>学生</b></td>
+<td>只有 <code>--sid</code>：查自己的任务书</td>
+<td>学生自助，零教师维护；<b>无批量能力</b>，拿不到同班别人的口径与锚点值</td></tr>
+<tr><td><code>hw_spec_generator.py</code></td><td><b>教师留存</b></td>
+<td><code>--batch</code> 批量发放 / <code>--verify</code> 复算 / <code>--audit</code> 抽查</td>
+<td>教师手里留一份原始副本，批改时一键复算学生的数字。<b>此文件不发给学生</b></td></tr>
+</table>
+
+<div class="danger-zone"><b>为什么教师版绝不能发？</b><code>--batch</code> 能一次列出全班每个人的
+<b>数据口径、指纹与锚点值</b>。学生拿到后可直接查到同学的锚点值。虽然填进自己的报告
+仍然对不上（教师按本人学号复算），但这等于把"审计底牌"交出去，也让机制失去威慑。
+<b>发学生版，留教师版。</b></div>
+
+<div class="mech-box">
+<b>无状态：两个版本口径必然一致</b><br>
+口径派生只依赖学号本身（<code>sha256(学号) → 种子 → 抽参数</code>），
+不含任何批次上下文。教师版直接 <code>import</code> 学生版的同一份函数，
+所以"我复算"和"他自查"是同一段代码跑出来的——<b>结构上杜绝口径漂移</b>。<br>
+<span class="badge g">已实测</span>学生版与教师版对同一学号输出：指纹与锚点值逐字一致。
+</div>
+
+<h3>10.3 任务书长什么样（学号 202504003 真实输出）</h3>
+<pre class="code-bridge">
+<span class="comment">$ python hw_task_selfservice.py --sid 202504003</span>
+学号 202504003 的专属任务书
+  目标变量   Headway (s)（车头时距 (s)），异常区间 [0.3, 60.0]
+  方向/车道  South(南行) / SB_MID
+  粒度/天数  30min / 5 天   -&gt; 序列 239 点
+  窗口/步长  look_back 72 -&gt; horizon 8（未来 4.0 小时）
+  CV 折数    5 折 + 末端保留     随机种子 53709
+  数据指纹   7fb0197353b2
+  锚点值     折1 SeasonalNaive MASE = 0.1513
+  附加任务   必须画出一张『误差随预测步长(1~h)的衰减曲线』，比较递归式与直接式的差别
+</pre>
+
+<div class="mech-box">
+<b>教师批改时的校验（1 条命令，10 秒）</b>
+<pre class="code-bridge" style="margin:8px 0"><span class="func">python</span> hw_spec_generator.py --verify 202504003
+<span class="comment"># 输出: 数据指纹 = 7fb0197353b2   锚点值 = 0.1513</span>
+<span class="comment"># 报告里这两个数字对不上 -&gt; 该生报告不是自己跑出来的</span></pre>
+批量发放：<code>python hw_spec_generator.py --batch 202504001 ... 202504040</code>
+（自动检测口径冲突并告警；实测 40 人班 40 个指纹全唯一）
+</div>
+
+<h3>10.4 你要做的四件事</h3>
+<ol>
+<li><b>数据重构</b>：按任务书的<b>方向 / 车道 / 目标变量 / 粒度 / 天数</b>过滤聚合，
+剔除区间外异常值，丢弃无数据的跨天空箱。<b>算出并验证自己的数据指纹</b>。</li>
+<li><b>模型 A（Ridge-AR）</b>：窗口 $\to$ horizon 的线性回归，
+报告 <code>alpha</code> 的选择过程（必须用<b>训练段内层验证</b>，不许用测试集）。</li>
+<li><b>模型 B（NLinear + 特征工程）</b>：实例归一化（减窗口末值），
+特征至少含：滞后 1/2/3 步、滞后一个完整周期、过去半周期滚动均值与滚动标准差、时段指示变量。</li>
+<li><b>滚动起源交叉验证</b>：按任务书的折数 + 末端保留折，报告<b>每折指标与均值 ± 标准差</b>；
+主指标 <b>MASE</b>，附 MAE / RMSE；必须打败 Seasonal Naive。</li>
+</ol>
+
+<h3>10.5 强制"思考痕迹"的三项要求</h3>
+<div class="mech-box">
+<b>① 反事实实验（必须成对给数字）</b><br>
+人为制造一次数据泄露（例如：标准化改用全序列统计量 / 滚动统计窗口右移 1 格），
+报告"<b>正确 MASE → 泄露后 MASE</b>"这对数字，并解释涨幅从哪来。
+<span class="badge">防 AI 最有效</span>——AI 编造解释很容易，但编出<b>与你自己代码自洽的成对数字</b>很难。
+<br><br>
+<b>② 三个关键决定 + 放弃理由</b><br>
+报告必须写：你在建模中做了哪 3 个关键决定？<b>每个决定的备选方案是什么，你为什么放弃了它？</b>
+（例如："周期我选了 48 而不是 24，因为……""我放弃了 SARIMA 因为……"）
+<span class="badge g">AI 最容易漏的就是"放弃理由"</span>
+<br><br>
+<b>③ 残差诊断结论</b><br>
+做一次 Ljung-Box 检验（<b>逐折</b>做，不许汇集），说明残差是否还有结构、若有则下一步该加什么特征。
+</div>
+
+<h3>10.6 过程留痕与审计（提交要求）</h3>
+
+<div class="mech-box">
+<b>配套文档（下载后按小节填写，不要自己另起格式）</b>
+<table style="margin:8px 0">
+<tr><th>文件</th><th>用途</th></tr>
+<tr><td><code>homework/学生作业报告模板.docx</code></td>
+<td><b>你要提交的报告</b>。十个小节，含数据指纹/锚点值校验栏、逐折 MASE 表、
+三项思考痕迹填写区、AI 使用声明与提交自检清单（≤2 页）</td></tr>
+<tr><td><code>homework/学生作业指导书.docx</code></td>
+<td><b>不会做时看这份</b>。第 0~10 步逐步操作指南，含环境命令、任务书字段解读、
+示例代码函数地图、基准数字对照、常见错误排查表、评分标准</td></tr>
+</table>
+</div>
+
+<table>
+<tr><th>提交物</th><th>硬性要求</th><th>对应的造假检测</th></tr>
+<tr><td>git 仓库</td><td><b>≥8 次提交，时间跨度 ≥3 天</b>；提交信息含<b>学号 + 关键指标</b>；
+每阶段（数据/建模/CV/诊断/报告）分别提交</td>
+<td>一次性生成的仓库没有时间跨度；提交信息里的指标必须与报告一致</td></tr>
+<tr><td>报告 ≤2 页</td><td>必须含：<b>数据指纹</b>、<b>锚点值</b>、反事实成对数字、
+三个决定+放弃理由、逐折残差诊断、误差时段分析（≤800 字）</td>
+<td>缺任一项直接扣分；数字对不上教师可复算</td></tr>
+<tr><td>图表 ≥4 张</td><td>序列+ACF、CV 各折预测对比、残差诊断、误差随步长（或消融）</td>
+<td>图表必须能由代码重新生成</td></tr>
+<tr><td><b>课堂随机抽查</b></td><td>随机指定<b>某一折</b>，要求现场运行并展示该折结果，
+并回答："你为什么没用 SARIMA / Transformer？"</td>
+<td><b>最有效</b>：AI 无法预演随机指定的折</td></tr>
+</table>
+
+<h3>10.7 AI 使用边界（明确写出来，比含糊其辞更有效）</h3>
+<div class="mech-box">
+<b>允许</b>：用 AI 查文档、解释概念、debug 自己写的报错、检查代码风格。<br>
+<b>必须标注</b>：在报告末尾列出"AI 协助点"清单，并<b>接受就其追问</b>
+（例如"这段你为什么这么写""如果去掉这个特征会怎样"）。<br>
+<b>不允许</b>：让 AI 直接生成核心建模代码或整篇报告。<br>
+<b>判定标准</b>：<b>能被你当场解释的才算你的</b>；解释不了的，无论是谁写的都算不合格。
+</div>
+
+<h3>10.8 评分标准</h3>
+<table>
+<tr><th>评分项</th><th>权重</th><th>要点</th></tr>
+<tr><td>数据重构与指纹</td><td>15%</td><td>口径严格匹配任务书；指纹自洽；异常值处理有说明</td></tr>
+<tr><td>建模严谨性</td><td>20%</td><td>alpha 内层验证；无测试集调参；模型 B 特征完整且无泄露</td></tr>
+<tr><td>评估协议</td><td>20%</td><td>滚动起源折数正确；报告<b>均值±标准差</b>；MASE 分母只用训练段</td></tr>
+<tr><td>思考痕迹三项</td><td>25%</td><td>反事实成对数字 / 三个决定+放弃理由 / 逐折残差诊断</td></tr>
+<tr><td>误差分析</td><td>10%</td><td>时段归因有数据支撑，不套话</td></tr>
+<tr><td>过程留痕</td><td>10%</td><td>提交跨度、提交信息、抽查表现</td></tr>
+</table>
+
+<div class="danger-zone"><b>红线（违规直接扣 30%，严重者记 0）</b><br>
+① 特征/归一化用到未来信息；② 用测试集调参；③ 单次划分冒充交叉验证；
+④ 指纹或锚点值与教师复算结果不一致且无法解释；⑤ 现场抽查无法运行自己的代码。</div>
+
+<div class="teacher-note">
+<b>教师侧总工作量提示</b>：<code>--batch</code> 一次生成全班任务书约 1-2 分钟；
+批改时对每份报告跑一条 <code>python hw_spec_generator.py --verify &lt;学号&gt;</code>，
+核对<b>指纹</b>与<b>锚点值</b>两个数字，即可筛出绝大多数代写/抄袭。
+其余精力放在"三个决定 + 放弃理由"的质量上——那才是真正考察思考的地方。
+</div>
+
+</div>
+
+<!-- ======== 第11章 ======== -->
+<h2>11. 总结</h2>
+
+<pre class="ascii-art">
+                        时间序列预测
+                            |
+        +-------------------+-------------------+
+        |                   |                   |
+     看结构              选方法              严评估
+        |                   |                   |
+   ADF 只查单位根     基线: SeasonalNaive   滚动起源 CV
+   ACF 读出周期 s    现代: NLinear/DLinear  主指标 MASE
+   分解看三层         Patch:PatchTST       禁: 打乱/泄露
+   残差查剩余        前沿: TSFM 零样本      审计: 可复现
+        |                   |                   |
+        v                   v                   v
+   [!] 平稳≠无季节     [!] 简单模型常赢      [!] 数字要能复现
+</pre>
+
+<blockquote>
+<strong>一句话总结</strong>：2026 年的时序预测，<strong>最重要的能力不是会调 Transformer，
+而是知道该用什么、不该用什么</strong>。RNN 已退场、线性模型复兴、基础模型接管冷启动，
+但 Seasonal Naive 这条基线依然是最锋利的检察官。先看清数据的结构（周期、平稳性、残差），
+再按数据特征选方法（不是按论文热度选），最后用不打乱时间、能被复现的方式诚实地评估。
+flow.csv 的 192 个点给出的启示很朴素：<strong>贴合结构的简单模型，
+常常打败结构错配的复杂模型</strong>。
+</blockquote>
+
+<!-- ======== 第12章 ======== -->
+<h2>12. 延伸阅读（前瞻性文献）</h2>
+
+<table>
+<tr><th>方向</th><th>文献 / 资源</th></tr>
+<tr><td><b>基准与综述（先读这两篇）</b></td>
+<td><a href="https://arxiv.org/abs/2410.10393">GIFT-Eval (arXiv:2410.10393)</a> — 23 数据集 / 14.4 万序列 /
+1.77 亿点，含<b>防泄露预训练集</b>与 17 个基线，是理解当前格局最权威的入口</td></tr>
+<tr><td></td><td>Deep Learning for Time Series Forecasting: A Survey
+(<a href="https://arxiv.org/abs/2503.10198">arXiv:2503.10198</a>, Int. J. ML 2025)</td></tr>
+<tr><td>基础模型综述</td><td>Foundation Models for Time Series: A Survey
+(<a href="https://arxiv.org/abs/2504.04011">arXiv:2504.04011</a>)；
+Empowering TS with Foundation Models (<a href="https://arxiv.org/abs/2405.02358">arXiv:2405.02358</a>)</td></tr>
+<tr><td><b>线性 vs Transformer 实证</b></td><td>UrbanAI 2025 Challenge
+(<a href="https://arxiv.org/abs/2512.10866">arXiv:2512.10866</a>) — 本课第 6.3 节数据来源</td></tr>
+<tr><td>线性模型</td><td>DLinear (AAAI 2023)、RevIN (NeurIPS 2022)、NLinear、RLinear、FITS (2024)</td></tr>
+<tr><td>Patch/Transformer</td><td>PatchTST (ICLR 2023)、iTransformer (ICLR 2024)、
+TimeMixer (ICLR 2024)、ModernTCN (NeurIPS 2024)、TimeXer (2024)</td></tr>
+<tr><td>统计与经典</td><td>Hyndman &amp; Athanasopoulos,
+<a href="https://otexts.com/fpp3/">Forecasting: Principles and Practice (3rd ed.)</a> — 免费经典</td></tr>
+</table>
+
+<div class="teacher-note">
+<b>运行教学代码</b>: <code>python timeseries_flow_code.py</code>（约 90 秒，无需 GPU）<br>
+10 步: 聚合 → ADF → ACF/PACF → 分解 → 滚动CV → 基线 → 现代线性族 → 残差诊断 → 权重 → 可视化<br>
+生成 9 张图: <code>output/ts_01_eda.png ~ ts_09_weights.png</code> + 真实结果 <code>output/results.json</code><br>
+<b>作业工具</b>（发给学生）: <code>python hw_task_selfservice.py --sid &lt;学号&gt;</code><br>
+&nbsp;&nbsp;教师留存（<b>不发给学生</b>）: <code>python hw_spec_generator.py --batch/--verify</code><br>
+环境: <code>pip install pandas numpy matplotlib scikit-learn statsmodels</code>
+</div>
+
+<br><hr>
+<p style="text-align:center;color:var(--text-secondary);font-size:0.9em;">
+  Day 5 — 时间序列预测 | 前沿范式 + 真实数据 + 防 AI 作业设计 |
+  <a href="Day3_RNN_DeepTheory.html">← Day 3 RNN</a> |
+  <a href="Day4_Transformer_DeepTheory.html">Day 4 Transformer →</a>
+</p>
+
+</div>
+</body>
+</html>

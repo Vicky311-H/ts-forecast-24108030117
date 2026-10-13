@@ -1,0 +1,5 @@
+flow.csv
+*.zip
+__pycache__/
+*.pyc
+.idea/

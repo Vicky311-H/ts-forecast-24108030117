@@ -1,0 +1,169 @@
+{
+  "n_raw": 503768,
+  "n_bad": 8378,
+  "series_len": 192,
+  "look_back": 24,
+  "horizon": 24,
+  "period": 24,
+  "adf_raw": {
+    "adf": -7.4524334214193395,
+    "p": 5.624550151124525e-11,
+    "stationary": true
+  },
+  "adf_diff": {
+    "adf": -6.754127070318891,
+    "p": 2.9007067954062457e-09,
+    "stationary": true
+  },
+  "typical_day": [
+    37.78,
+    37.83,
+    37.67,
+    37.92,
+    37.82,
+    37.49,
+    35.78,
+    28.07,
+    27.55,
+    32.08,
+    33.66,
+    33.6,
+    33.41,
+    33.56,
+    33.24,
+    32.17,
+    29.8,
+    28.96,
+    31.17,
+    34.42,
+    35.91,
+    36.09,
+    36.5,
+    36.99
+  ],
+  "folds": [
+    "折1",
+    "折2",
+    "折3",
+    "末端保留"
+  ],
+  "cv_summary": {
+    "Naive(随机游走)": {
+      "MAE_mean": 3.3,
+      "MAE_std": 0.4102,
+      "MASE_mean": 2.2102,
+      "MASE_std": 0.3194
+    },
+    "Seasonal Naive": {
+      "MAE_mean": 1.154,
+      "MAE_std": 0.1434,
+      "MASE_mean": 0.7709,
+      "MASE_std": 0.0973
+    },
+    "Ridge-AR(线性基线)": {
+      "MAE_mean": 1.0115,
+      "MAE_std": 0.1791,
+      "MASE_mean": 0.6769,
+      "MASE_std": 0.1289
+    },
+    "NLinear(实例归一化)": {
+      "MAE_mean": 1.1726,
+      "MAE_std": 0.1732,
+      "MASE_mean": 0.7849,
+      "MASE_std": 0.1287
+    },
+    "DLinear(趋势-季节双头)": {
+      "MAE_mean": 0.9691,
+      "MAE_std": 0.3707,
+      "MASE_mean": 0.6499,
+      "MASE_std": 0.2591
+    },
+    "SeasonalDiff(季节差分线性)": {
+      "MAE_mean": 1.338,
+      "MAE_std": 0.7359,
+      "MASE_mean": 0.8837,
+      "MASE_std": 0.4621
+    }
+  },
+  "holdout_metrics": {
+    "Naive(随机游走)": {
+      "MAE": 2.9222,
+      "RMSE": 3.747,
+      "MASE": 1.951
+    },
+    "Seasonal Naive": {
+      "MAE": 1.181,
+      "RMSE": 1.8736,
+      "MASE": 0.7885
+    },
+    "Ridge-AR(线性基线)": {
+      "MAE": 0.813,
+      "RMSE": 1.1772,
+      "MASE": 0.5428
+    },
+    "NLinear(实例归一化)": {
+      "MAE": 0.9363,
+      "RMSE": 1.3619,
+      "MASE": 0.6251
+    },
+    "DLinear(趋势-季节双头)": {
+      "MAE": 0.555,
+      "RMSE": 0.7178,
+      "MASE": 0.3705
+    },
+    "SeasonalDiff(季节差分线性)": {
+      "MAE": 0.7944,
+      "RMSE": 0.9119,
+      "MASE": 0.5303
+    }
+  },
+  "residual_ljungbox": {
+    "DLinear(趋势-季节双头)": {
+      "ljungbox_lag": 12,
+      "stat": 81.33991827336384,
+      "p": 2.2898930368224278e-12,
+      "pooled_n": 96
+    },
+    "SeasonalDiff(季节差分线性)": {
+      "ljungbox_lag": 12,
+      "stat": 103.02622785956778,
+      "p": 1.4188317291471026e-16,
+      "pooled_n": 96
+    },
+    "Ridge-AR(线性基线)": {
+      "ljungbox_lag": 12,
+      "stat": 73.61017198181428,
+      "p": 6.722357358981618e-11,
+      "pooled_n": 96
+    },
+    "NLinear(实例归一化)": {
+      "ljungbox_lag": 12,
+      "stat": 92.98706856807856,
+      "p": 1.3005035816153294e-14,
+      "pooled_n": 96
+    },
+    "Seasonal Naive": {
+      "ljungbox_lag": 12,
+      "stat": 87.52963605634983,
+      "p": 1.4823373544985527e-13,
+      "pooled_n": 96
+    },
+    "Naive(随机游走)": {
+      "ljungbox_lag": 12,
+      "stat": 134.33360075784077,
+      "p": 8.30757806697825e-23,
+      "pooled_n": 96
+    }
+  },
+  "figures": {
+    "eda": "ts_01_eda.png",
+    "stationarity": "ts_02_stationarity.png",
+    "acf_pacf": "ts_03_acf_pacf.png",
+    "decomp": "ts_04_decomposition.png",
+    "cv": "ts_05_rolling_cv.png",
+    "forecast": "ts_06_forecast.png",
+    "metrics": "ts_07_metrics.png",
+    "residual": "ts_08_residual_acf.png",
+    "weights": "ts_09_weights.png"
+  }
+}
