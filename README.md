@@ -70,3 +70,28 @@ python timeseries_flow_code.py
 4. 过程留痕（`git log` 截图或导出，≥8 次提交、跨 ≥3 天）。
 
 如有疑问，先查 `学生作业指导书.docx` 的排错表；仍未解决再问老师。祝你顺利。
+
+## How to Run
+
+Run the experiment stages in order:
+
+1. Stage 1: data preprocessing and fingerprint verification
+2. Stage 2: Seasonal Naive baseline
+3. Stage 3: Ridge-AR
+4. Stage 4: NLinear
+5. Stage 5: residual diagnostics and leakage counterfactual
+6. Stage 6: time-block error analysis and Direct vs Recursive comparison
+7. Stage 7: final summary
+
+Key configuration:
+
+- Student ID: 24108030117
+- Target: Gap (s)
+- Direction: South
+- Lane: SB_NS
+- Aggregation: 1 hour
+- Sequence length: 168
+- Look-back: 60
+- Seasonal period: 24
+- Horizon: 4
+- Fingerprint: e461b6a28e6d
