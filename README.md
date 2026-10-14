@@ -95,3 +95,23 @@ Key configuration:
 - Seasonal period: 24
 - Horizon: 4
 - Fingerprint: e461b6a28e6d
+
+## Repository Structure
+
+- `hw_24108030117.py`: main preprocessing and experiment entry
+- `hw_24108030117_stage2.py`: Seasonal Naive baseline and rolling-origin evaluation
+- `hw_24108030117_stage3.py`: Ridge-AR model
+- `hw_24108030117_stage4.py`: NLinear model
+- `hw_24108030117_stage5.py`: residual diagnostics and leakage counterfactual
+- `hw_24108030117_stage6.py`: time-block analysis and Direct vs Recursive comparison
+- `hw_24108030117_stage7.py`: final experiment summary
+- `student_output/`: generated experiment outputs
+- `RESULTS.md`: summary of the main experimental results
+
+## Key Configuration
+
+- Look-back: 60
+- Seasonal period: 24
+- Forecast horizon: 4
+- Rolling-origin CV folds: 5
+- Fingerprint: `e461b6a28e6d`
